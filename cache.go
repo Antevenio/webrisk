@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     https://www.apache.org/licenses/LICENSE-2.0
+//	https://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -64,7 +64,7 @@ type cache struct {
 
 // Update updates the cache according to the request that was made to the server
 // and the response given back.
-func (c *cache) Update(req *pb.SearchHashesRequest, resp *pb.SearchHashesResponse) error {
+func (c *cache) Update(req *pb.SearchHashesRequest, resp *pb.SearchHashesResponse, wr *UpdateClient) error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -82,16 +82,28 @@ func (c *cache) Update(req *pb.SearchHashesRequest, resp *pb.SearchHashesRespons
 		if c.pttls[fullHash] == nil {
 			c.pttls[fullHash] = make(map[ThreatType]time.Time)
 		}
+
+		googleTime := threat.ExpireTime.AsTime()
+		expireTime := googleTime
+		if wr.config.FixedCacheTTL > 0 {
+			expireTime = time.Now().Add(wr.config.FixedCacheTTL)
+		}
+		wr.log.Print("Caching positive hit google time: ", googleTime, " our time: ", expireTime)
 		for _, tt := range threat.ThreatTypes {
-			c.pttls[fullHash][ThreatType(tt)] = threat.ExpireTime.AsTime()
+			c.pttls[fullHash][ThreatType(tt)] = expireTime
 		}
 	}
 
 	// Insert negative TTLs for partial hashes.
 	if resp.GetNegativeExpireTime() != nil {
-		nttl := resp.GetNegativeExpireTime().AsTime()
+		googleTime := resp.GetNegativeExpireTime().AsTime()
+		expireTime := googleTime
+		if wr.config.FixedCacheTTL > 0 {
+			expireTime = time.Now().Add(wr.config.FixedCacheTTL)
+		}
+		wr.log.Print("Caching negative hit google time: ", googleTime, " our time: ", expireTime)
 		partialHash := hashPrefix(req.HashPrefix)
-		c.nttls[partialHash] = nttl
+		c.nttls[partialHash] = expireTime
 	}
 	return nil
 }

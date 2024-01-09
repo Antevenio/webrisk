@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     https://www.apache.org/licenses/LICENSE-2.0
+//	https://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -200,15 +200,16 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
-	"github.com/rakyll/statik/fs"
+	"github.com/google/webrisk"
 	_ "github.com/google/webrisk/cmd/wrserver/statik"
 	pb "github.com/google/webrisk/internal/webrisk_proto"
-	"github.com/google/webrisk"
+	"github.com/rakyll/statik/fs"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -223,11 +224,14 @@ const (
 )
 
 var (
-	apiKeyFlag      = flag.String("apikey", os.Getenv("APIKEY"), "specify your Web Risk API key")
-	srvAddrFlag     = flag.String("srvaddr", "0.0.0.0:8080", "TCP network address the HTTP server should use")
-	proxyFlag       = flag.String("proxy", "", "proxy to use to connect to the HTTP server")
-	databaseFlag    = flag.String("db", "", "path to the Web Risk database.")
-	threatTypesFlag = flag.String("threatTypes", "ALL", "threat types to check against")
+	apiKeyFlag                 = flag.String("apikey", os.Getenv("APIKEY"), "specify your Web Risk API key")
+	srvAddrFlag                = flag.String("srvaddr", "0.0.0.0:8080", "TCP network address the HTTP server should use")
+	proxyFlag                  = flag.String("proxy", "", "proxy to use to connect to the HTTP server")
+	databaseFlag               = flag.String("db", "", "path to the Web Risk database.")
+	threatTypesFlag            = flag.String("threatTypes", "ALL", "threat types to check against")
+	databaseUpdateIntervalFlag = flag.String("dbUpdateInterval", "30m", "minutes between database updates")
+	flushCacheFlag             = flag.String("flushCache", "true", "whether the local cache should be flushed on database updates")
+	fixedCacheTTLFlag          = flag.String("fixedCacheTTL", "", "specify a fixed cache ttl overriding google recommendation")
 )
 
 var threatTemplate = map[webrisk.ThreatType]string{
@@ -477,7 +481,7 @@ func runServer(srv *http.Server) (chan os.Signal, <-chan struct{}) {
 	// start listening for interrupts
 	exit := make(chan os.Signal, 1)
 	down := make(chan struct{})
-	
+
 	// runs shutdown and cleanup on an exit signal
 	go func() {
 		<-exit
@@ -517,13 +521,38 @@ func main() {
 		fmt.Fprintln(os.Stderr, "No -apikey specified")
 		os.Exit(1)
 	}
+
+	flushCache, err := strconv.ParseBool(*flushCacheFlag)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Invalid -flushCache option value", *flushCacheFlag)
+		os.Exit(1)
+	}
+
 	conf := webrisk.Config{
 		APIKey:        *apiKeyFlag,
 		ProxyURL:      *proxyFlag,
 		DBPath:        *databaseFlag,
 		ThreatListArg: *threatTypesFlag,
 		Logger:        os.Stderr,
+		FlushCache:    flushCache,
 	}
+
+	if *databaseUpdateIntervalFlag != "" {
+		conf.UpdatePeriod, err = time.ParseDuration(*databaseUpdateIntervalFlag)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Invalid -databaseUpdateInterval option value", *databaseUpdateIntervalFlag)
+			os.Exit(1)
+		}
+	}
+
+	if *fixedCacheTTLFlag != "" {
+		conf.FixedCacheTTL, err = time.ParseDuration(*fixedCacheTTLFlag)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Invalid -fixedCacheTTL option value", *fixedCacheTTLFlag)
+			os.Exit(1)
+		}
+	}
+
 	wr, err := webrisk.NewUpdateClient(conf)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Unable to initialize Web Risk client: ", err)

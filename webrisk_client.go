@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     https://www.apache.org/licenses/LICENSE-2.0
+//	https://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -181,6 +181,10 @@ type Config struct {
 	// If empty, no logs will be written.
 	Logger io.Writer
 
+	FixedCacheTTL time.Duration
+
+	FlushCache bool
+
 	// compressionTypes indicates how the threat entry sets can be compressed.
 	compressionTypes []pb.CompressionType
 
@@ -206,6 +210,7 @@ func (c *Config) setDefaults() bool {
 	if c.compressionTypes == nil {
 		c.compressionTypes = []pb.CompressionType{pb.CompressionType_RAW, pb.CompressionType_RICE}
 	}
+
 	return true
 }
 
@@ -473,6 +478,7 @@ func (wr *UpdateClient) LookupURLsContext(ctx context.Context, urls []string) (t
 				}
 
 				reqs = append(reqs, &pb.SearchHashesRequest{
+					Url:         url,
 					HashPrefix:  []byte(partialHash),
 					ThreatTypes: tts,
 				})
@@ -482,6 +488,7 @@ func (wr *UpdateClient) LookupURLsContext(ctx context.Context, urls []string) (t
 
 	for _, req := range reqs {
 		// Actually query the Web Risk API for exact full hash matches.
+		wr.log.Print("Calling WR API looking for:", req.Url)
 		resp, err := wr.api.HashLookup(ctx, req.HashPrefix, req.ThreatTypes)
 		if err != nil {
 			wr.log.Printf("HashLookup failure: %v", err)
@@ -490,7 +497,7 @@ func (wr *UpdateClient) LookupURLsContext(ctx context.Context, urls []string) (t
 		}
 
 		// Update the cache.
-		wr.c.Update(req, resp)
+		wr.c.Update(req, resp, wr)
 
 		// Pull the information the client cares about out of the response.
 		for _, threat := range resp.GetThreats() {
@@ -535,7 +542,12 @@ func (wr *UpdateClient) updater(delay time.Duration) {
 			ctx, cancel := context.WithTimeout(context.Background(), wr.config.RequestTimeout)
 			if delay, ok = wr.db.Update(ctx, wr.api); ok {
 				wr.log.Printf("background threat list updated")
-				wr.c.Purge()
+				if wr.config.FlushCache {
+					wr.c.Purge()
+					wr.log.Printf("cache flushed")
+				} else {
+					wr.log.Printf("not flushing cache as requested by configuration")
+				}
 			}
 			cancel()
 

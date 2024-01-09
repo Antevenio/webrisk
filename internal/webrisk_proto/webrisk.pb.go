@@ -502,6 +502,7 @@ type SearchHashesRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	Url string
 	// A hash prefix, consisting of the most significant 4-32 bytes of a SHA256
 	// hash. For JSON requests, this field is base64-encoded.
 	HashPrefix []byte `protobuf:"bytes,1,opt,name=hash_prefix,json=hashPrefix,proto3" json:"hash_prefix,omitempty"`
