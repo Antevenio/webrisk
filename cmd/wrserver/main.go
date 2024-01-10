@@ -529,19 +529,21 @@ func main() {
 	}
 
 	if *databaseUpdateIntervalFlag != "" {
-		conf.UpdatePeriod, err = time.ParseDuration(*databaseUpdateIntervalFlag)
+		updatePeriod, err := time.ParseDuration(*databaseUpdateIntervalFlag)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Invalid -databaseUpdateInterval option value", *databaseUpdateIntervalFlag)
 			os.Exit(1)
 		}
+		conf.UpdatePeriod = updatePeriod
 	}
 
 	if *fixedCacheTTLFlag != "" {
-		conf.FixedCacheTTL, err = time.ParseDuration(*fixedCacheTTLFlag)
+		fixedCacheTTL, err := time.ParseDuration(*fixedCacheTTLFlag)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Invalid -fixedCacheTTL option value", *fixedCacheTTLFlag)
 			os.Exit(1)
 		}
+		conf.FixedCacheTTL = fixedCacheTTL
 	}
 
 	wr, err := webrisk.NewUpdateClient(conf)
