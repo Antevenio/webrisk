@@ -183,8 +183,6 @@ type Config struct {
 
 	FixedCacheTTL time.Duration
 
-	FlushCache bool
-
 	// compressionTypes indicates how the threat entry sets can be compressed.
 	compressionTypes []pb.CompressionType
 
@@ -488,7 +486,7 @@ func (wr *UpdateClient) LookupURLsContext(ctx context.Context, urls []string) (t
 
 	for _, req := range reqs {
 		// Actually query the Web Risk API for exact full hash matches.
-		wr.log.Print("Calling WR API looking for:", req.Url)
+		wr.log.Print("Calling WR API looking for: ", req.Url)
 		resp, err := wr.api.HashLookup(ctx, req.HashPrefix, req.ThreatTypes)
 		if err != nil {
 			wr.log.Printf("HashLookup failure: %v", err)
@@ -542,12 +540,8 @@ func (wr *UpdateClient) updater(delay time.Duration) {
 			ctx, cancel := context.WithTimeout(context.Background(), wr.config.RequestTimeout)
 			if delay, ok = wr.db.Update(ctx, wr.api); ok {
 				wr.log.Printf("background threat list updated")
-				if wr.config.FlushCache {
-					wr.c.Purge()
-					wr.log.Printf("cache flushed")
-				} else {
-					wr.log.Printf("not flushing cache as requested by configuration")
-				}
+				wr.c.Purge()
+				wr.log.Printf("cache flushed")
 			}
 			cancel()
 

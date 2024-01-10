@@ -200,7 +200,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -230,7 +229,6 @@ var (
 	databaseFlag               = flag.String("db", "", "path to the Web Risk database.")
 	threatTypesFlag            = flag.String("threatTypes", "ALL", "threat types to check against")
 	databaseUpdateIntervalFlag = flag.String("dbUpdateInterval", "30m", "minutes between database updates")
-	flushCacheFlag             = flag.String("flushCache", "true", "whether the local cache should be flushed on database updates")
 	fixedCacheTTLFlag          = flag.String("fixedCacheTTL", "", "specify a fixed cache ttl overriding google recommendation")
 )
 
@@ -522,19 +520,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	flushCache, err := strconv.ParseBool(*flushCacheFlag)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Invalid -flushCache option value", *flushCacheFlag)
-		os.Exit(1)
-	}
-
 	conf := webrisk.Config{
 		APIKey:        *apiKeyFlag,
 		ProxyURL:      *proxyFlag,
 		DBPath:        *databaseFlag,
 		ThreatListArg: *threatTypesFlag,
 		Logger:        os.Stderr,
-		FlushCache:    flushCache,
 	}
 
 	if *databaseUpdateIntervalFlag != "" {
