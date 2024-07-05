@@ -496,13 +496,8 @@ func (wr *UpdateClient) LookupURLsContext(ctx context.Context, urls []string) (t
 
 		// Todo: build a SearchHashesResponse out of the SearhUrisResponse and SearchHashesRequest
 		shResp := new(pb.SearchHashesResponse)
-		urlhashes, err := generateHashes(req.Url)
 
-		if err != nil {
-			wr.log.Printf("error generating urlhashes: %v", err)
-			atomic.AddInt64(&wr.stats.QueriesFail, int64(len(urls)-i))
-			return threats, err
-		}
+		urlhashes, _ := generateHashes(req.Url)
 
 		for fullHash := range urlhashes {
 			shThreat := pb.SearchHashesResponse_ThreatHash{
