@@ -494,11 +494,15 @@ func (wr *UpdateClient) LookupURLsContext(ctx context.Context, urls []string) (t
 			return threats, err
 		}
 
+		wr.log.Printf("WR API response: %+v", resp)
+
 		// Todo: build a SearchHashesResponse out of the SearhUrisResponse and SearchHashesRequest
 		shResp := new(pb.SearchHashesResponse)
 		shResp.NegativeExpireTime = resp.Threat.ExpireTime
 
 		urlhashes, _ := generateHashes(req.Url)
+
+		wr.log.Printf("urlhashes: %+v", urlhashes)
 
 		for fullHash := range urlhashes {
 			shThreat := pb.SearchHashesResponse_ThreatHash{
