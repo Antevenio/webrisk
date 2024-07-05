@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     https://www.apache.org/licenses/LICENSE-2.0
+//	https://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,12 +22,13 @@ import (
 	"net/url"
 	"strings"
 
+	pb "github.com/google/webrisk/internal/webrisk_proto"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-	pb "github.com/google/webrisk/internal/webrisk_proto"
 )
 
 const (
+	searchUriPath               = "v1/uris:search"
 	findHashPath                = "v1/hashes:search"
 	fetchUpdatePath             = "v1/threatLists:computeDiff"
 	threatTypeString            = "threat_type"
@@ -36,6 +37,7 @@ const (
 	hashPrefixString            = "hash_prefix"
 	threatTypesString           = "threat_types"
 	userAgentString             = "Webrisk-Client/0.2.1"
+	uriString                   = "uri"
 )
 
 // The api interface specifies wrappers around the Web Risk API.
@@ -44,6 +46,8 @@ type api interface {
 		compressionTypes []pb.CompressionType) (*pb.ComputeThreatListDiffResponse, error)
 	HashLookup(ctx context.Context, hashPrefix []byte,
 		threatTypes []pb.ThreatType) (*pb.SearchHashesResponse, error)
+	UriLookup(ctx context.Context, uri string,
+		threatTypes []pb.ThreatType) (*pb.SearchUrisResponse, error)
 }
 
 // netAPI is an api object that talks to the server over HTTP.
@@ -138,5 +142,21 @@ func (a *netAPI) HashLookup(ctx context.Context, hashPrefix []byte,
 	}
 	u.RawQuery = q.Encode()
 	u.Path = findHashPath
+	return resp, a.doRequest(ctx, u.String(), resp)
+}
+
+// HashLookup issues a SearchHashes API call and returns the response.
+func (a *netAPI) UriLookup(ctx context.Context, uri string,
+	threatTypes []pb.ThreatType) (*pb.SearchUrisResponse, error) {
+	resp := new(pb.SearchUrisResponse)
+	u := *a.url // Make a copy of URL
+	// Add fields from SearchHashesRequest to URL request
+	q := u.Query()
+	q.Set(uriString, uri)
+	for _, threatType := range threatTypes {
+		q.Add(threatTypesString, threatType.String())
+	}
+	u.RawQuery = q.Encode()
+	u.Path = searchUriPath
 	return resp, a.doRequest(ctx, u.String(), resp)
 }

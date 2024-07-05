@@ -487,18 +487,27 @@ func (wr *UpdateClient) LookupURLsContext(ctx context.Context, urls []string) (t
 	for _, req := range reqs {
 		// Actually query the Web Risk API for exact full hash matches.
 		wr.log.Print("Calling WR API looking for: ", req.Url)
-		resp, err := wr.api.HashLookup(ctx, req.HashPrefix, req.ThreatTypes)
+		resp, err := wr.api.UriLookup(ctx, req.Url, req.ThreatTypes)
 		if err != nil {
-			wr.log.Printf("HashLookup failure: %v", err)
+			wr.log.Printf("UriLookup failure: %v", err)
 			atomic.AddInt64(&wr.stats.QueriesFail, 1)
 			return threats, err
 		}
 
+		// Todo: build a SearchHashesResponse out of the SearhUrisResponse and SearchHashesRequest
+		shResp := new(pb.SearchHashesResponse)
+		shThreat := pb.SearchHashesResponse_ThreatHash{
+			ThreatTypes: resp.Threat.ThreatTypes,
+			Hash:        req.HashPrefix,
+			ExpireTime:  resp.Threat.ExpireTime,
+		}
+		shResp.Threats = append(shResp.Threats, &shThreat)
+
 		// Update the cache.
-		wr.c.Update(req, resp, wr)
+		wr.c.Update(req, shResp, wr)
 
 		// Pull the information the client cares about out of the response.
-		for _, threat := range resp.GetThreats() {
+		for _, threat := range shResp.GetThreats() {
 			fullHash := hashPrefix(threat.Hash)
 			if !fullHash.IsFull() {
 				continue
