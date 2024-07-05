@@ -496,6 +496,7 @@ func (wr *UpdateClient) LookupURLsContext(ctx context.Context, urls []string) (t
 
 		// Todo: build a SearchHashesResponse out of the SearhUrisResponse and SearchHashesRequest
 		shResp := new(pb.SearchHashesResponse)
+		shResp.NegativeExpireTime = resp.Threat.ExpireTime
 
 		urlhashes, _ := generateHashes(req.Url)
 
@@ -513,6 +514,7 @@ func (wr *UpdateClient) LookupURLsContext(ctx context.Context, urls []string) (t
 
 		// Pull the information the client cares about out of the response.
 		for _, threat := range shResp.GetThreats() {
+			wr.log.Printf("Found one threat: %+v", threat)
 			fullHash := hashPrefix(threat.Hash)
 			if !fullHash.IsFull() {
 				continue
