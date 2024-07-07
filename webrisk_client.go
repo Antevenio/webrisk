@@ -72,6 +72,7 @@ import (
 	"time"
 
 	pb "github.com/google/webrisk/internal/webrisk_proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -498,7 +499,12 @@ func (wr *UpdateClient) LookupURLsContext(ctx context.Context, urls []string) (t
 
 		// Todo: build a SearchHashesResponse out of the SearhUrisResponse and SearchHashesRequest
 		shResp := new(pb.SearchHashesResponse)
-		shResp.NegativeExpireTime = resp.Threat.ExpireTime
+
+		if resp.Threat == nil {
+			shResp.NegativeExpireTime = timestamppb.New(time.Now().Add(5 * time.Minute))
+		} else {
+			shResp.NegativeExpireTime = resp.Threat.ExpireTime
+		}
 
 		urlhashes, _ := generateHashes(req.Url)
 
