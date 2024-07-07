@@ -499,24 +499,21 @@ func (wr *UpdateClient) LookupURLsContext(ctx context.Context, urls []string) (t
 
 		// Todo: build a SearchHashesResponse out of the SearhUrisResponse and SearchHashesRequest
 		shResp := new(pb.SearchHashesResponse)
+		urlhashes, _ := generateHashes(req.Url)
+		wr.log.Printf("urlhashes: %+v", urlhashes)
 
 		if resp.Threat == nil {
 			shResp.NegativeExpireTime = timestamppb.New(time.Now().Add(5 * time.Minute))
 		} else {
 			shResp.NegativeExpireTime = resp.Threat.ExpireTime
-		}
-
-		urlhashes, _ := generateHashes(req.Url)
-
-		wr.log.Printf("urlhashes: %+v", urlhashes)
-
-		for fullHash := range urlhashes {
-			shThreat := pb.SearchHashesResponse_ThreatHash{
-				ThreatTypes: resp.Threat.ThreatTypes,
-				Hash:        []byte(fullHash),
-				ExpireTime:  resp.Threat.ExpireTime,
+			for fullHash := range urlhashes {
+				shThreat := pb.SearchHashesResponse_ThreatHash{
+					ThreatTypes: resp.Threat.ThreatTypes,
+					Hash:        []byte(fullHash),
+					ExpireTime:  resp.Threat.ExpireTime,
+				}
+				shResp.Threats = append(shResp.Threats, &shThreat)
 			}
-			shResp.Threats = append(shResp.Threats, &shThreat)
 		}
 
 		// Update the cache.
