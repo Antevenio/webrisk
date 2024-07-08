@@ -223,7 +223,8 @@ const (
 )
 
 var (
-	apiKeyFlag                 = flag.String("apikey", os.Getenv("APIKEY"), "specify your Web Risk API key")
+	apiKeyFlag                 = flag.String("apikey", os.Getenv("APIKEY"), "specify your Web Risk API key (for threatLists.computeDiff)")
+	suApiKeyFlag               = flag.String("suapikey", os.Getenv("SU_APIKEY"), "specify your Web Risk API key (for uris.search)")
 	srvAddrFlag                = flag.String("srvaddr", "0.0.0.0:8080", "TCP network address the HTTP server should use")
 	proxyFlag                  = flag.String("proxy", "", "proxy to use to connect to the HTTP server")
 	databaseFlag               = flag.String("db", "", "path to the Web Risk database.")
@@ -249,7 +250,7 @@ client's machine or within the same local network so that it can handle most
 local API calls before resorting to making an API call to the actual
 Web Risk API over the internet.
 
-Usage: %s -apikey=$APIKEY
+Usage: %s -apikey=$APIKEY -suapikey=$SU_APIKEY
 
 `
 
@@ -522,6 +523,7 @@ func main() {
 
 	conf := webrisk.Config{
 		APIKey:        *apiKeyFlag,
+		SUAPIKey:      *suApiKeyFlag,
 		ProxyURL:      *proxyFlag,
 		DBPath:        *databaseFlag,
 		ThreatListArg: *threatTypesFlag,

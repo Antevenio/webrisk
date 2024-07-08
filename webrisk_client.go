@@ -144,6 +144,10 @@ type Config struct {
 	// service. This field is required.
 	APIKey string
 
+	// SUAPIKey is the key used to authenticate with the Web Risk API
+	// service. This field is required.
+	SUAPIKey string
+
 	// ID and Version are client metadata associated with each API request to
 	// identify the specific implementation of the client.
 	// They are similar in usage to the "User-Agent" in an HTTP request.
@@ -187,8 +191,9 @@ type Config struct {
 	// compressionTypes indicates how the threat entry sets can be compressed.
 	compressionTypes []pb.CompressionType
 
-	api api
-	now func() time.Time
+	api   api
+	suApi api
+	now   func() time.Time
 }
 
 // setDefaults configures Config to have default parameters.
@@ -250,6 +255,7 @@ type UpdateClient struct {
 	stats  Stats // Must be first for 64-bit alignment on non 64-bit systems.
 	config Config
 	api    api
+	suApi  api
 	db     database
 	c      cache
 
@@ -299,12 +305,23 @@ func NewUpdateClient(conf Config) (*UpdateClient, error) {
 			return nil, err
 		}
 	}
+
+	// Create the SafeBrowsing object.
+	if conf.suApi == nil {
+		var err error
+		conf.api, err = newNetAPI(conf.ServerURL, conf.SUAPIKey, conf.ProxyURL)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if conf.now == nil {
 		conf.now = time.Now
 	}
 	wr := &UpdateClient{
 		config: conf,
 		api:    conf.api,
+		suApi:  conf.suApi,
 		c:      cache{now: conf.now},
 	}
 
@@ -488,7 +505,7 @@ func (wr *UpdateClient) LookupURLsContext(ctx context.Context, urls []string) (t
 	for _, req := range reqs {
 		// Actually query the Web Risk API for exact full hash matches.
 		wr.log.Print("Calling WR API looking for: ", req.Url)
-		resp, err := wr.api.UriLookup(ctx, req.Url, req.ThreatTypes)
+		resp, err := wr.suApi.UriLookup(ctx, req.Url, req.ThreatTypes)
 		if err != nil {
 			wr.log.Printf("UriLookup failure: %v", err)
 			atomic.AddInt64(&wr.stats.QueriesFail, 1)
