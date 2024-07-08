@@ -309,7 +309,7 @@ func NewUpdateClient(conf Config) (*UpdateClient, error) {
 	// Create the SafeBrowsing object.
 	if conf.suApi == nil {
 		var err error
-		conf.api, err = newNetAPI(conf.ServerURL, conf.SUAPIKey, conf.ProxyURL)
+		conf.suApi, err = newNetAPI(conf.ServerURL, conf.SUAPIKey, conf.ProxyURL)
 		if err != nil {
 			return nil, err
 		}
