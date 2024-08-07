@@ -517,7 +517,7 @@ func (wr *UpdateClient) LookupURLsContext(ctx context.Context, urls []string) (t
 		// Todo: build a SearchHashesResponse out of the SearhUrisResponse and SearchHashesRequest
 		shResp := new(pb.SearchHashesResponse)
 		urlhashes, _ := generateHashes(req.Url)
-		wr.log.Printf("urlhashes: %+v", urlhashes)
+		// wr.log.Printf("urlhashes: %+v", urlhashes)
 
 		if resp.Threat == nil {
 			shResp.NegativeExpireTime = timestamppb.New(time.Now().Add(5 * time.Minute))
